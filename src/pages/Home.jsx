@@ -14,7 +14,7 @@ function Home() {
         setUser(response.data);
         setStatus("logged-in");
       } catch (error) {
-        if (error.response?.status === 401) {
+        if (error.response?.status === 401 || error.response?.status === 404) {
           setStatus("logged-out");
         } else {
           setStatus("error");
