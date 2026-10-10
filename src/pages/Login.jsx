@@ -3,12 +3,14 @@ import { Link, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "../schemas/authSchemas.js";
+import { userAuthDataStore } from "../store/userAuthDataStore.js";
 import "../index.css";
 import api from "../api";
 
 function Login() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState("");
+  const setUser = userAuthDataStore(state => state.setUser);
 
   const {
     register,
@@ -25,7 +27,9 @@ function Login() {
   async function onSubmit(formData) {
     setServerError("");
     try {
-      await api.post("/user/login", formData);
+      const response = await api.post("/user/login", formData);
+      const { name, age, email, usage } = response;
+      setUser({ name, age, email, usage });
       navigate("/", { replace: true });
     } catch (err) {
       setServerError(

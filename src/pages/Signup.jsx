@@ -3,12 +3,14 @@ import { Link, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema } from "../schemas/authSchemas.js";
+import { userAuthDataStore } from "../store/userAuthDataStore.js";
 import api from "../api.js";
 import "../index.css";
 
 export default function Signup() {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState("");
+  const setUser = userAuthDataStore(state => state.setUser);
 
   const {
     register,
@@ -26,7 +28,9 @@ export default function Signup() {
 
   async function onSubmit(formData) {
     try {
-      await api.post("/user/signup", formData);
+      const response = await api.post("/user/signup", formData);
+      const { name, age, email, usage } = response;
+      setUser({ name, age, email, usage });
       navigate("/", { replace: true });
     } catch (error) {
       setServerError(
