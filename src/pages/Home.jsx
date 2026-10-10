@@ -10,7 +10,7 @@ function Home() {
   useEffect(() => {
     async function checkSession() {
       try {
-        const response = await api.get("/users/profile");
+        const response = await api.get("/user/profile");
         setUser(response.data);
         setStatus("logged-in");
       } catch (error) {
@@ -39,8 +39,10 @@ function Home() {
 
   return (
     <>
-      <h1>Welcome to chat-g-baby</h1>
-      <p>Hello, {user.name}</p>
+      <h1 className="text-2xl text-gray-800 underline ml-2 mt-2 mb-2">
+        Welcome to chat-g-baby
+      </h1>
+      <p className="text-xl text-gray-700 mt-2 ml-2">Hello, {user.name}</p>
     </>
   );
 }
