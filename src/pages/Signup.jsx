@@ -29,7 +29,7 @@ export default function Signup() {
   async function onSubmit(formData) {
     try {
       const response = await api.post("/user/signup", formData);
-      const { name, age, email, usage } = response;
+      const { name, age, email, usage } = response.data;
       setUser({ name, age, email, usage });
       navigate("/", { replace: true });
     } catch (error) {
@@ -40,7 +40,7 @@ export default function Signup() {
   }
 
   return (
-    <main className="mx-auto mt-16 max-w-sm px-4 ">
+    <main className="mx-auto mt-16 max-w-sm p-4 bg-[#2a2a2a] text-gray-200 rounded-xl">
       <h1 className="mb-6 text-3xl font-bold">Sign up</h1>
 
       <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -109,7 +109,7 @@ export default function Signup() {
       </form>
 
       <p className="mt-4">
-        Already have an account?{" "}
+        Already have an account ?{"  "}
         <Link to="/login" className="text-blue-600">
           Log in
         </Link>

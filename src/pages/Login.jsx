@@ -28,7 +28,7 @@ function Login() {
     setServerError("");
     try {
       const response = await api.post("/user/login", formData);
-      const { name, age, email, usage } = response;
+      const { name, age, email, usage } = response.data;
       setUser({ name, age, email, usage });
       navigate("/", { replace: true });
     } catch (err) {
@@ -38,7 +38,7 @@ function Login() {
     }
   }
   return (
-    <main className="mx-auto mt-16 max-w-sm px-4">
+    <main className="mx-auto mt-16 max-w-sm p-4 bg-[#2a2a2a] text-gray-200 rounded-xl">
       <h1 className="mb-6 text-3xl font-bold">Log in</h1>
 
       <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -86,8 +86,8 @@ function Login() {
       </form>
 
       <p className="mt-4">
-        New user?{" "}
-        <Link to="/signup" className="text-blue-600">
+        New user ?{" "}
+        <Link to="/signup" className="text-blue-600 hover:underline">
           Sign up
         </Link>
       </p>
