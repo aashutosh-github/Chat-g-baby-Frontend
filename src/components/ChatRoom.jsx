@@ -243,7 +243,7 @@ export default function ChatRoom({
                 key={
                   normalizedMessage._id ?? `${normalizedMessage.role}-${index}`
                 }
-                className={`group w-fit max-w-[85%] break-words rounded-3xl px-4 py-3 ${
+                className={`group w-fit max-w-[85%] wrap-break-word rounded-3xl px-4 py-3 ${
                   isUserMessage
                     ? "ml-auto bg-[#303030]"
                     : "mr-auto border border-white/10 bg-[#262626]"
@@ -292,7 +292,7 @@ export default function ChatRoom({
           })}
 
         {pendingQuestion && (
-          <div className="ml-auto w-fit max-w-[85%] break-words rounded-3xl bg-[#303030] px-4 py-3 whitespace-pre-wrap">
+          <div className="ml-auto w-fit max-w-[85%] wrap-break-word rounded-3xl bg-[#303030] px-4 py-3 whitespace-pre-wrap">
             <p className="mb-1 text-xs font-medium text-[#b4b4b4]">You</p>
             <p className="leading-7 text-[#ececec]">{pendingQuestion}</p>
           </div>
@@ -305,7 +305,7 @@ export default function ChatRoom({
         )}
 
         {visibleReply !== null && (
-          <div className="mr-auto w-fit max-w-[85%] break-words rounded-3xl border border-white/10 bg-[#262626] px-4 py-3 whitespace-pre-wrap">
+          <div className="mr-auto w-fit max-w-[85%] wrap-break-word rounded-3xl border border-white/10 bg-[#262626] px-4 py-3 whitespace-pre-wrap">
             <p className="mb-1 text-xs font-medium text-[#9f9f9f]">Assistant</p>
             <p className="leading-7 text-[#ececec]">
               {visibleReply}
@@ -323,7 +323,7 @@ export default function ChatRoom({
 
       <form
         onSubmit={handleSend}
-        className="mx-4 mb-4 flex w-auto max-w-3xl shrink-0 items-end gap-2 rounded-[24px] border border-[#454545] bg-[#2b2b2b] p-2 shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition focus-within:border-[#666] focus-within:ring-2 focus-within:ring-white/10 sm:mx-auto sm:w-full"
+        className="mx-4 mb-4 flex w-auto max-w-3xl shrink-0 items-end gap-2 rounded-3xl border border-[#454545] bg-[#2b2b2b] p-2 shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition focus-within:border-[#666] focus-within:ring-2 focus-within:ring-white/10 sm:mx-auto sm:w-full"
       >
         <textarea
           id="message"
