@@ -1,6 +1,15 @@
 import { create } from "zustand";
 
-export const userChatStore = create(set => ({
+import type { ChatMessage } from "../types";
+
+type UserChatStore = {
+  messagesByChatId: Record<string, ChatMessage[]>;
+  setChatMessage: (chatId: string, messages: ChatMessage[]) => void;
+  removeChat: (chatId: string) => void;
+  clearChat: () => void;
+};
+
+export const userChatStore = create<UserChatStore>(set => ({
   messagesByChatId: {},
 
   setChatMessage: (chatId, messages) =>
