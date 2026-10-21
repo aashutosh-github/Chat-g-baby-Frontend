@@ -1,22 +1,30 @@
+import axios from "axios";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signupSchema } from "../schemas/authSchemas.js";
-import { userAuthDataStore } from "../store/userAuthDataStore.js";
+
 import api from "../api.js";
 import "../index.css";
+import { signupSchema } from "../schemas/authSchemas.js";
+import { userAuthDataStore } from "../store/userAuthDataStore.js";
+
+import type z from "zod";
+
+type SignupFormInput = z.input<typeof signupSchema>;
+type SignupFormData = z.output<typeof signupSchema>;
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState("");
   const setUser = userAuthDataStore(state => state.setUser);
+
+  const [serverError, setServerError] = useState("");
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({
+  } = useForm<SignupFormInput, unknown, SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: "",
@@ -26,16 +34,17 @@ export default function Signup() {
     },
   });
 
-  async function onSubmit(formData) {
+  async function onSubmit(formData: SignupFormData) {
     try {
       const response = await api.post("/user/signup", formData);
-      const { name, age, email, usage } = response.data;
-      setUser({ name, age, email, usage });
+      const { name, age, email } = response.data;
+      setUser({ name, age, email });
       navigate("/", { replace: true });
-    } catch (error) {
-      setServerError(
-        error.response?.data?.message || "signup failed, please try again",
-      );
+    } catch (error: unknown) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data.message
+        : `Signup failed, please try again`;
+      setServerError(message);
     }
   }
 
