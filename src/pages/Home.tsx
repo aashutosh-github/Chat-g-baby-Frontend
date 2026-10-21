@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router";
+import axios from "axios";
 
 import { userAuthDataStore } from "../store/userAuthDataStore.js";
 import { userChatStore } from "../store/userChatStore.js";
 import api from "../api.js";
-import ChatSidebar from "../components/ChatSidebar.jsx";
-import ChatRoom from "../components/ChatRoom.jsx";
+import ChatSidebar from "../components/ChatSidebar.js";
+import ChatRoom from "../components/ChatRoom.js";
+
+import type { Usage } from "../types.js";
 
 function Home() {
   const { chatId } = useParams();
@@ -14,13 +17,13 @@ function Home() {
   const setUser = userAuthDataStore(state => state.setUser);
   const clearChat = userChatStore(state => state.clearChat);
 
-  const [status, setStatus] = useState(user ? "ready" : "loading");
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [logOutError, setLogOutError] = useState("");
-  const [refreshChats, setRefreshChats] = useState(0);
-  const [chatBusy, setChatBusy] = useState(false);
-  const [usage, setUsage] = useState(null);
-  const [usageError, setUsageError] = useState("");
+  const [status, setStatus] = useState<string>(user ? "ready" : "loading");
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const [logOutError, setLogOutError] = useState<string>("");
+  const [refreshChats, setRefreshChats] = useState<number>(0);
+  const [chatBusy, setChatBusy] = useState<boolean>(false);
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [usageError, setUsageError] = useState<string>("");
 
   useEffect(() => {
     async function loadHome() {
@@ -30,8 +33,11 @@ function Home() {
         setUser({ name, age, email });
         setUsage(usage);
         setStatus("ready");
-      } catch (error) {
-        setStatus(error.response?.status === 401 ? "logged-out" : "error");
+      } catch (error: unknown) {
+        const status = axios.isAxiosError(error)
+          ? error.response?.status
+          : undefined;
+        setStatus(status === 401 ? "logged-out" : "error");
         return;
       }
     }
@@ -45,8 +51,11 @@ function Home() {
 
     try {
       await api.post("/user/logout");
-    } catch (error) {
-      if (error.response?.status !== 401) {
+    } catch (error: unknown) {
+      const status = axios.isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+      if (status !== 401) {
         setLogOutError("Could not log out. Please try again.");
         setIsLoggingOut(false);
         return;
@@ -84,7 +93,7 @@ function Home() {
     return <Navigate to="/signup" replace />;
   }
 
-  function refreshSidebar() {
+  function refreshSidebar(): void {
     setRefreshChats(count => count + 1);
   }
 
