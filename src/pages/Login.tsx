@@ -10,7 +10,6 @@ import { loginSchema } from "../schemas/authSchemas.js";
 import { userAuthDataStore } from "../store/userAuthDataStore.js";
 
 import type z from "zod";
-import type { Usage } from "../types.js";
 
 type LoginFormInput = z.input<typeof loginSchema>;
 type LoginFormData = z.output<typeof loginSchema>;
@@ -20,7 +19,6 @@ function Login() {
   const setUser = userAuthDataStore(state => state.setUser);
 
   const [serverError, setServerError] = useState<string>("");
-  const [usage, setUsage] = useState<Usage | null>(null);
 
   const {
     register,
@@ -38,9 +36,8 @@ function Login() {
     setServerError("");
     try {
       const response = await api.post("/user/login", formData);
-      const { name, age, email, usage } = response.data;
+      const { name, age, email } = response.data;
       setUser({ name, age, email });
-      setUsage(usage);
       navigate("/", { replace: true });
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
