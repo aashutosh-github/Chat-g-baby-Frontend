@@ -1,9 +1,24 @@
 import { Link, useNavigate } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import axios from "axios";
 
 import { userAuthDataStore } from "../store/userAuthDataStore.js";
 import { userChatStore } from "../store/userChatStore.js";
 import api from "../api.js";
+
+type RecentChats = {
+  _id: string;
+  topic: string;
+  updated_at: string;
+};
+
+type SideBarType = {
+  chatId: string | undefined;
+  refreshChats: number;
+  onChatsChanged: () => void;
+  busy: boolean;
+  onBusyChange: Dispatch<SetStateAction<boolean>>;
+};
 
 function ChatSidebar({
   chatId,
@@ -11,18 +26,18 @@ function ChatSidebar({
   onChatsChanged,
   busy,
   onBusyChange,
-}) {
+}: SideBarType) {
   const navigate = useNavigate();
   const setUser = userAuthDataStore(state => state.setUser);
   const removeChat = userChatStore(state => state.removeChat);
 
-  const [chats, setChats] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [deletingId, setDeletingId] = useState(null);
+  const [chats, setChats] = useState<RecentChats[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
+    let active: boolean = true;
 
     async function loadChats() {
       try {
@@ -30,7 +45,8 @@ function ChatSidebar({
         if (active) setChats(response.data.chats);
       } catch (err) {
         if (!active) return;
-        if (err.response?.status === 401) {
+        const status = axios.isAxiosError(err) ? err.response?.status : 500;
+        if (status === 401) {
           setUser(null);
         } else {
           setError("Could not load recent chats, please try again");
@@ -47,7 +63,7 @@ function ChatSidebar({
     };
   }, [refreshChats, setUser]);
 
-  async function handleDeleteChat(id) {
+  async function handleDeleteChat(id: string) {
     if (busy || !window.confirm("Delete this chat and all its messages ?")) {
       return;
     }
@@ -57,18 +73,19 @@ function ChatSidebar({
     setError("");
 
     try {
-      const response = await api.delete(`/chat/${id}`);
+      await api.delete(`/chat/${id}`);
       removeChat(id);
       onChatsChanged();
       if (id === chatId) navigate("/");
     } catch (err) {
-      if (err.response?.status == 401) {
+      const status = axios.isAxiosError(err) ? err.response?.status : 500;
+      if (status == 401) {
         setUser(null);
       } else {
-        setError(
-          err.response?.data?.message ||
-            "Could not delete chat, please try again",
-        );
+        const message = axios.isAxiosError(err)
+          ? err.response?.data?.message
+          : `Could not load data, please try again`;
+        setError(message);
       }
     } finally {
       setDeletingId(null);
