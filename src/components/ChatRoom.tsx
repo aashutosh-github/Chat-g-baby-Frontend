@@ -1,14 +1,39 @@
+import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+
 import api from "../api.js";
 import { userAuthDataStore } from "../store/userAuthDataStore.js";
 import { userChatStore } from "../store/userChatStore.js";
 
-function revealReplySlowly(text, onChange) {
+import type { Dispatch, SetStateAction } from "react";
+import type { SubmitEvent } from "react";
+import type { ChatMessage, Usage } from "../types.js";
+
+type ReturnedMessagesFromBackend = {
+  userId: string;
+  chatId: string;
+  role: "user_input" | "model_output" | "user" | "assistant";
+  content: string;
+  tokens: number;
+  totalTokens: number;
+};
+
+type ChatRoomTypes = {
+  chatId?: string;
+  onChatsChanged: () => void;
+  onBusyChange: Dispatch<SetStateAction<boolean>>;
+  onUsageChange: Dispatch<SetStateAction<Usage | null>>;
+};
+
+type Role = "user" | "assistant";
+type MessageInput = ChatMessage | ReturnedMessagesFromBackend | string;
+
+function revealReplySlowly(text: string, onChange: (content: string) => void) {
   const characters = Array.from(text);
   const charactersPerStep = Math.max(1, Math.ceil(characters.length / 240));
 
-  return new Promise(resolve => {
+  return new Promise<void>(resolve => {
     if (characters.length === 0) {
       resolve();
       return;
@@ -27,30 +52,27 @@ function revealReplySlowly(text, onChange) {
   });
 }
 
-function normalizeRole(message, fallbackRole) {
-  const role = String(
-    message?.role ?? message?.sender ?? message?.author ?? fallbackRole ?? "",
-  ).toLowerCase();
+function normalizeRole(message: { role?: string }, fallbackRole: Role): Role {
+  const role = message?.role?.toLowerCase();
 
-  if (["user", "human", "user_input", "customer"].includes(role)) {
+  if (role === "user" || role === "user_input") {
     return "user";
   }
 
-  if (
-    ["assistant", "ai", "bot", "model_output", "assistant_output"].includes(
-      role,
-    )
-  ) {
+  if (role === "assistant" || role === "model_output") {
     return "assistant";
   }
 
-  return fallbackRole || "assistant";
+  return fallbackRole;
 }
 
-function normalizeMessage(message, fallbackRole) {
+function normalizeMessage(
+  message: MessageInput,
+  fallbackRole: Role = "assistant",
+): ChatMessage {
   if (typeof message === "string") {
     return {
-      role: fallbackRole || "assistant",
+      role: fallbackRole,
       content: message,
     };
   }
@@ -58,7 +80,7 @@ function normalizeMessage(message, fallbackRole) {
   return {
     ...message,
     role: normalizeRole(message, fallbackRole),
-    content: message.content ?? message.text ?? message.message ?? "",
+    content: message.content,
   };
 }
 
@@ -67,20 +89,22 @@ export default function ChatRoom({
   onChatsChanged,
   onBusyChange,
   onUsageChange,
-}) {
+}: ChatRoomTypes) {
   const navigate = useNavigate();
-  const conversationRef = useRef(null);
+  const conversationRef = useRef<HTMLElement | null>(null);
   const setUser = userAuthDataStore(state => state.setUser);
-  const messages = userChatStore(state => state.messagesByChatId[chatId]);
+  const messages = userChatStore(state =>
+    chatId ? state.messagesByChatId[chatId] : undefined,
+  );
   const setChatMessage = userChatStore(state => state.setChatMessage);
 
-  const [draft, setDraft] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [error, setError] = useState("");
-  const [pendingQuestion, setPendingQuestion] = useState(null);
-  const [visibleReply, setVisibleReply] = useState(null);
+  const [draft, setDraft] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [sending, setSending] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
+  const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+  const [visibleReply, setVisibleReply] = useState<string | null>(null);
 
   function scrollToBottom() {
     requestAnimationFrame(() => {
@@ -90,7 +114,7 @@ export default function ChatRoom({
   }
 
   useEffect(() => {
-    if (!chatId || messages !== undefined) return;
+    if (typeof chatId !== "string" || messages !== undefined) return;
     let active = true;
 
     async function loadMessages() {
@@ -98,18 +122,21 @@ export default function ChatRoom({
       setError("");
 
       try {
+        if (!chatId) throw new Error(`Chat ID is missing`);
         const response = await api.get(`/msg/${chatId}`);
         if (active) {
-          const messages = response.data.messages;
+          const messages: ReturnedMessagesFromBackend[] =
+            response.data.messages;
           setChatMessage(
             chatId,
-            messages.map(message => normalizeMessage(message)),
+            messages.map(message => normalizeMessage(message, "assistant")),
           );
           scrollToBottom();
         }
       } catch (error) {
         if (!active) return;
-        if (error.response?.status === 401) {
+        const status = axios.isAxiosError(error) ? error.response?.status : 500;
+        if (status === 401) {
           setUser(null);
         } else {
           setError("Could not load this chat. Please refresh.");
@@ -125,7 +152,7 @@ export default function ChatRoom({
     };
   }, [chatId, messages, setChatMessage, setUser]);
 
-  async function handleSend(event) {
+  async function handleSend(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = draft.trim();
     if (!content || sending || deletingId || (chatId && messages === undefined))
@@ -169,13 +196,14 @@ export default function ChatRoom({
       setPendingQuestion(null);
       setVisibleReply(null);
       setDraft(content);
-      if (error.response?.status === 401) {
+      const status = axios.isAxiosError(error) ? error.response?.status : 500;
+      if (status === 401) {
         setUser(null);
       } else {
-        setError(
-          error.response?.data?.message ||
-            "Message could not be sent. Try again.",
-        );
+        const message = axios.isAxiosError(error)
+          ? error.response?.data.message
+          : `Message could not be sent. Try again.`;
+        setError(message);
       }
     } finally {
       setSending(false);
@@ -183,7 +211,7 @@ export default function ChatRoom({
     }
   }
 
-  async function handleDeleteMessage(messageId) {
+  async function handleDeleteMessage(messageId: string) {
     if (
       !chatId ||
       !messages ||
@@ -204,10 +232,14 @@ export default function ChatRoom({
       );
       onChatsChanged();
     } catch (error) {
-      if (error.response?.status === 401) {
+      const status = axios.isAxiosError(error) ? error.response?.status : 500;
+      if (status === 401) {
         setUser(null);
       } else {
-        setError(error.response?.data?.message || "Could not delete message.");
+        const message = axios.isAxiosError(error)
+          ? error.response?.data.message
+          : `Message could not be sent. Try again.`;
+        setError(message);
       }
     } finally {
       setDeletingId(null);
@@ -259,7 +291,9 @@ export default function ChatRoom({
                   </p>
                   <button
                     type="button"
-                    onClick={() => handleDeleteMessage(normalizedMessage._id)}
+                    onClick={() =>
+                      handleDeleteMessage(normalizedMessage?._id ?? "")
+                    }
                     disabled={sending || Boolean(deletingId)}
                     aria-label={`Delete ${normalizedMessage.role} message`}
                     title="Delete message"
@@ -282,11 +316,12 @@ export default function ChatRoom({
                 <p className="whitespace-pre-wrap leading-7 text-[#ececec]">
                   {normalizedMessage.content}
                 </p>
-                {!isUserMessage && normalizedMessage.usage?.totalTokens > 0 && (
-                  <p className="mt-2 text-xs text-[#8e8e8e]">
-                    {normalizedMessage.usage.totalTokens} tokens used
-                  </p>
-                )}
+                {!isUserMessage &&
+                  (normalizedMessage.usage?.totalTokens ?? 0) > 0 && (
+                    <p className="mt-2 text-xs text-[#8e8e8e]">
+                      {normalizedMessage?.usage?.totalTokens} tokens used
+                    </p>
+                  )}
               </div>
             );
           })}
@@ -333,7 +368,9 @@ export default function ChatRoom({
           placeholder="Message the assistant..."
           rows={1}
           disabled={
-            sending || Boolean(deletingId) || (chatId && messages === undefined)
+            sending ||
+            Boolean(deletingId) ||
+            Boolean(chatId && messages === undefined)
           }
           className="max-h-40 min-h-11 flex-1 resize-none overflow-y-auto bg-transparent px-3 py-2.5 text-[15px] leading-6 text-[#ececec] outline-none placeholder:text-[#8e8e8e] disabled:opacity-50"
         />
@@ -343,7 +380,7 @@ export default function ChatRoom({
             !draft.trim() ||
             sending ||
             Boolean(deletingId) ||
-            (chatId && messages === undefined)
+            Boolean(chatId && messages === undefined)
           }
           aria-label="Send message"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl font-semibold text-[#212121] transition hover:scale-105 hover:bg-[#e5e5e5] disabled:scale-100 disabled:bg-[#686868] disabled:text-[#303030]"

@@ -139,7 +139,7 @@ function Home() {
 
         <ChatRoom
           key={chatId || "new"}
-          chatId={chatId}
+          chatId={chatId ?? ""}
           onChatsChanged={refreshSidebar}
           onBusyChange={setChatBusy}
           onUsageChange={setUsage}
